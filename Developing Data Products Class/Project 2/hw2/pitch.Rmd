@@ -9,27 +9,47 @@ output: ioslides_presentation
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-## R Markdown
+## Introduction
 
-This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This is a random number generator.  You can select a distribution and 2 parameters, and see a histogram of the results.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+## Parameters
 
-## Slide with Bullets
+### Distribution settings:
+- Parameter 1
+- Parameter 2
+Parameters have different meanings for various distributions.
 
-- Bullet 1
-- Bullet 2
-- Bullet 3
+### Simulation Settings
+- N
 
-## Slide with R Output
+### Histogram Settings
+- Number of buckets
 
-```{r cars, echo = TRUE}
-summary(cars)
+## Example
+
+```{r , echo = F}
+brks=25
+par(mfrow=c(1,2))
+hist(runif(10000, 0, 3), breaks = brks, col = 'darkgray',  border = 'white', main="uniform[0,3]")
+hist(rnorm(10000, 0, 3), breaks = brks, col = 'darkgray',  border = 'white', main="normal(0,3)")
 ```
 
-## Slide with Plot
+etc.
 
-```{r pressure}
-plot(pressure)
-```
+## Distributions
+
+- Uniform
+- Normal
+- binomial
+- lognormal
+- $\chi^2$
+
+## Problems
+
+
+- Limited number of distributions.  
+- Parameters of distribution can be more than 2.
+- Parameters of distribution are not always clear.
+
 
