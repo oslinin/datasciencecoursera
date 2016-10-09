@@ -1,16 +1,18 @@
 ---
 title: "Assignment 1"
 author: "Oleg Slinin"
-date: "October 5, 2016"
-output: ioslides_presentation
+date: "October 9, 2016"
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-## R Markdown
+## The leaflet
+```{r}
 print(Sys.Date())
 library("leaflet")
 leaflet() %>% addTiles() 
 
+```
