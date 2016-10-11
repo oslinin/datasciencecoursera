@@ -13,6 +13,10 @@ knitr::opts_chunk$set(echo = FALSE)
 ```{r}
 print(Sys.Date())
 library("leaflet")
-leaflet() %>% addTiles() 
+#leaflet() %>% addTiles() 
+set.seed(2016-04-25)
+df <- data.frame(lat = runif(20, min = 39.2, max = 39.3),
+                 lng = runif(20, min = -76.6, max = -76.5))
+df %>% leaflet() %>% addTiles() %>% addMarkers()
 
 ```
