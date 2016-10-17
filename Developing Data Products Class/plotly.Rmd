@@ -1,6 +1,9 @@
 ---
 title: "plotly"
 output: ioslides_presentation
+date: "October 16, 2016"
+author: "Oleg Slinin"
+
 ---
 
 ```{r setup, include=FALSE}
