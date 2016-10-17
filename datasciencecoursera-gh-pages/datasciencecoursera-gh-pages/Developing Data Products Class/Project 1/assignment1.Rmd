@@ -1,0 +1,22 @@
+---
+title: "Assignment 1"
+author: "Oleg Slinin"
+date: "October 9, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## The leaflet
+```{r}
+print(Sys.Date())
+library("leaflet")
+#leaflet() %>% addTiles() 
+set.seed(2016-04-25)
+df <- data.frame(lat = runif(20, min = 39.2, max = 39.3),
+                 lng = runif(20, min = -76.6, max = -76.5))
+df %>% leaflet() %>% addTiles() %>% addMarkers()
+
+```
