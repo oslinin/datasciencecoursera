@@ -1,0 +1,16 @@
+---
+title: "plotly"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(plotly)
+```
+
+
+## Slide with Plot
+```{r}
+plot_ly(mtcars, x=wt, y=mpg, mode="markers")
+
+```
