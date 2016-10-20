@@ -1,18 +1,20 @@
-#Question 1
+
+#Question 1 Tree
 library(AppliedPredictiveModeling)
-data(segmentationOriginal)
+load("//Msad/root/NA/NY/users/slinino/My Documents/R/segmentationOriginal.RData")
 library(caret)
 set.seed(125)
 i=which(names(segmentationOriginal)=="Case")
-dat<-split(segmentationOriginal[,-i], segmentationOriginal[[i]])
-modFit <- train(Area~ .,data=dat[["train"]],method="treebag")
+dat<-split(segmentationOriginal[,-c(1, i)], segmentationOriginal[[i]])
+modFit <- train(Class~ .,data=dat[["Train"]],method="rpart")
 
 pre.dat=data.frame(TotalIntench2= c(23, 50,  57,  NA)*1000, 
                    FiberWidthCh1= c(10, 10,   8,   8), 
                    PerimStatusCh1=c(2 , NA,  NA,   2), 
                    VarIntenCh4=   c(NA,100, 100, 100)
                   )
-predict(modFit, pre.dat)
+# PS WS PS
+modFit$finalModel
 
 #Question 3
 load("//Msad/root/NA/NY/users/slinino/My Documents/R/olive_data/olive.rda")
