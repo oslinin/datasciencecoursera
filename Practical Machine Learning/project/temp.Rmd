@@ -1,0 +1,225 @@
+---
+  title: "Machine Learning Project"
+author: "Oleg Slinin"
+date: "October 31, 2016"
+output: html_document
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The following is an application of machine learning to predict the validity of exercise performance based on sensor data.
+
+We save the variables in each chunk of R code to binary files and use those files if possible, in order to avoid rerunning code unnecessarily.
+
+## Read data
+```{r , echo=F}
+source("G:/knitr.R")
+setwd("//msad/root/NA/NY/USERS/slinino/My Documents/R/datasciencecoursera-gh-pages/Practical Machine Learning/project")
+```
+
+```{r }
+library("caret")
+library("mvbutils")
+if (!exists("traind")) if (file.exists("train.RData")) load("train.RData")
+if (!exists("traind")){
+  traind<<-read.csv("pml-training.csv",row.names=1, na.strings=c("NA", "", "#DIV/0!"))
+  testd<<-read.csv("pml-testing.csv",row.names=1, na.strings=c("NA", "", "#DIV/0!"))
+  keep.cols=names(train) #columns to include in the model.
+  save(traind, testd, keep.cols, file="train.RData")
+} 
+```
+
+## Explanatory Data Analysis
+
+Most data is sensor readings. The exception is the variable columns.
+```{r , echo=T}
+names(traind)[sapply(traind, class)=="factor"]
+```
+
+The test data has user_name, so we will use the field, and the analysis will only apply to the users in the dataset.  
+
+There are 3 time stamp columns: raw_timestamp_part_1, raw_timestamp_part_2, and cvtd_timestamp. The definition of these columns is not available, so we explore the data to see if they are redundant.  The first two columns do not seem to be correlated, so we will use both fields: 
+  
+```{r , echo=T}
+library(ggplot2)
+library(Hmisc);library(gridExtra);
+
+qplot(raw_timestamp_part_1, raw_timestamp_part_2, data=traind, 
+      color=user_name, main = "Timestamp Columns")
+```
+To see the result more clearly, we look at one user_name.
+```{r , echo=T}
+qplot(raw_timestamp_part_1, raw_timestamp_part_2, color=user_name, 
+      data=traind[traind$user_name=="charles",], main = "Timestamp Columns: one user")
+```
+
+The field cvtd_timestamp seems to be a less granular version of raw_timestamp_part_1.
+```{r , echo=T}
+qplot(raw_timestamp_part_1, cvtd_timestamp, data=traind, color=user_name, main = "Timestamp Columns")
+```
+To see the result more clearly, we look at one user_name.
+```{r , echo=T}
+qplot(raw_timestamp_part_1, cvtd_timestamp, color=user_name, 
+      data=traind[traind$user_name=="charles",], main = "Timestamp Columns: one user")
+
+```
+
+## Data cleaning
+
+We will remove columns that are almost completely NA and other low variance variables.  We use the caret::newarZeroVar() function to filter out variables with near zero variance.
+
+```{r , echo=T}
+if (!exists("zero.vars")) if (file.exists("zero.var.RData")) load("zero.var.RData")
+if (!exists("zero.vars")){
+  zero.vars = nearZeroVar(traind[,keep.cols], saveMetrics = T)
+  drop.cols <- names(traind[,keep.cols])[zero.vars$nzv]; 
+  keep.cols=keep.cols%except%drop.cols
+  save(zero.vars, drop.cols, keep.cols, file="zero.var.RData")
+} 
+```
+
+There are still NAs in the data, and most prediction algorithms cannot handle it.  We will use knnImpute method to preProcess the data and estimate missing data from the averages of the k nearest neightbors.
+
+```{r , echo=T}
+if (!exists("preObj")) if (file.exists("preObj.RData")) load("preObj.RData")
+if (!exists("preObj")){
+  preObj <- preProcess(traind[,keep.cols],method=c("knnImpute","center","scale")) 
+  trainp <- predict(preObj, traind[,keep.cols])
+  save(preObj, trainp, file="preObj.RData")
+} 
+```
+
+## Model fitting 
+
+### Trees
+We will try to fit a tree model using the rpart package.  Trees are generally useful for splitting variables into multiple groups, which is the task here.
+
+
+```{r , echo=T}
+if (!exists("modFit.rpart")) if (file.exists("modFit.rpart.RData")) load("modFit.rpart.RData")
+if (!exists("modFit.rpart")){
+  modFit.rpart <- train(classe~ .,data=trainp,method="rpart") 
+  print(modFit.rpart$finalModel) #variables handled appropriately
+  print(confusionMatrix(trainp$classe, predict(modFit.rpart,trainp))$overall['Accuracy'])
+  save(modFit.rpart, file="modFit.rpart.RData")
+} 
+
+```
+
+Accuracy is low, and the tree traversal model does not seem to be the best way to model these largely numerical covariates.  
+
+### Linear Discriminant Analysis
+
+We will now fit a linear discriminant analysis model using the MASS package through the caret package.  
+
+```{r , echo=T}
+if (!exists("modFit.lda")) if (file.exists("modFit.lda.RData"))  load("modFit.lda.RData")
+if (!exists("modFit.lda")){
+  modFit.lda <- train(classe~ .,data=trainp,method="lda") 
+  print(modFit.lda$finalModel) #variables handled appropriately
+  print(confusionMatrix(trainp$classe, predict(modFit.lda,trainp))$overall['Accuracy'])
+  save(modFit.lda, file="modFit.lda.RData")
+} 
+```
+
+The accuracy is fairly high.  The model has also created indicated variables for the user_name, which is necessary for variable data, since the numerical value of the variable is meaningless.  We will use cross validation to attempt to improve out of sample performance, becuase the accuracy measure of the model above will be too optimistic for out of sample data.
+
+```{r , echo=T}
+fitControl <- trainControl(method = "cv", #cross validation
+                           number = 100 # fold cross-validation so variance not too large
+)
+if (!exists("modFit.lda.cv")) if(file.exists("modFit.lda.cv.RData")) load("modFit.lda.cv.RData")
+if (!exists("modFit.lda.cv")){
+  modFit.lda.cv <- train(classe~ .,data=trainp,method="lda", trainControl=fitControl)
+  print(modFit.lda.cv$finalModel) #variables handled appropriately
+  print(confusionMatrix(trainp$classe, predict(modFit.lda.cv,trainp))$overall['Accuracy'])
+  save(modFit.lda.cv, file="modFit.lda.cv.RData")
+}  
+```
+
+There still 123 variables, and we will try to use PCA to reduce this number.  This preprocessing procedure will calculate a linear transformation of the variables to capture 90% of the variation in the variables, other than user_name.  We first calculate the number of principal components necessary, and then use this to fit the LDA model.  We also normalize the data in the preprocessing step by centering and scaling, in order to help the model calibrate.
+
+
+```{r , echo=T}
+if (!exists("preObj.pca")) if (file.exists("pca.RData")) load("pca.RData")
+if (!exists("preObj.pca")){
+  #calculate how many principal components we need
+  trainp1 <- train[,keep.cols[6:(length(keep.cols)-1)]]
+  preObj <- preProcess(trainp1,method=c("knnImpute","center","scale")) #,method=c()
+  trainp1 <- predict(preObj, trainp1)
+  PC=prcomp(trainp1,scale=T)
+  n.pca=min(which(PC$importance[3,]>=.9))
+  x=PC$sdev^2
+  x=x[order(x,decreasing=T)]
+  x2=cumsum(x)/sum(x)
+  n.pca=min(which(x2>.9))
+  print(paste(n.pca, " principal components capture 90% of the variance in the variables"))
+  
+  #fit an LDA model with PCA.
+  preObj.pca <- preProcess(traind[,keep.cols],method=c("knnImpute", "pca", "center", "scale"),
+                           pcaComp=n.pca) 
+  train.pca <- predict(preObj.pca, traind[,keep.cols])
+  modFit.lda.pca <- train(classe~ .,data=train.pca,method="lda") #missing values
+  print(modFit.lda.pca$finalModel) #variables handled appropriately
+  print(confusionMatrix(trainp$classe, predict(modFit.lda.pca,train.pca))$overall['Accuracy'])
+  save(n.pca, preObj.pca, train.pca, modFit.lda.pca, file="pca.RData")
+} 
+```
+
+The PCA model is less accurate, but faster, since it uses fewer variables.
+
+### Ensemble model
+We can try to combine predictors to see if in-sample performance improves.  We use random forests to combine predictors of our previous models.
+
+
+```{r , echo=T}
+if (!exists("combinedTrainData")) if (file.exists("ensemble.RData")) load("ensemble.RData")
+if (!exists("combinedTrainData")){
+  combinedTrainData <- data.frame(
+    classe=train$classe, 
+    lda=      predict(modFit.lda    ,trainp), 
+    lda.pca = predict(modFit.lda.pca,train.pca), 
+    rpart =   predict(modFit.rpart  ,trainp)
+  )
+  
+  comb.fit <- train(classe ~.,method="rf",data=combinedTrainData, prox=F) #The ensemble model does not calibrate unless prox=F.
+  combinedTrainData$combined.pred = predict(comb.fit, combinedTrainData)
+  confusionMatrix(combinedTrainData$classe, combinedTrainData$combined.pred)$overall['Accuracy']
+  sapply(combinedTrainData, function(x) mean(x==combinedTrainData$classe))
+  save(combinedTrainData,comb.fit, file= "ensemble.RData")
+}
+```
+
+The in-sample accuracy goes up .2% over the LDA model, so we will use the ensemble model.  
+
+We do not provide results for boosting or regularization feature selection because the models GBM and lars models through caret did not calibrate.  However, these would also be reasonable candidates for this classification problem.
+
+## Test data
+
+We will now apply the LDA model to the test data.
+
+```{r , echo=T}
+if (!exists("ensemble.test")) if (file.exists("modFit.lda.test.RData"))  load("modFit.lda.test.RData")
+if (!exists("ensemble.test")){
+  # apply the transformation in preObj to test data: knnImpute, center, scale; subset to keep.cols
+  keep.cols1 = keep.cols %except% "classe"
+  testp <- predict(preObj, testd[,keep.cols1]) 
+  test.pca <- predict(preObj.pca, testd[,keep.cols1])
+  
+  #run the model on test data.
+  combinedTestData <- data.frame(
+    lda=      predict(modFit.lda    ,testp), 
+    lda.pca = predict(modFit.lda.pca,test.pca), 
+    rpart =   predict(modFit.rpart  ,testp)
+  )  
+  ensemble.test <- predict(comb.fit, combinedTestData)
+  print(ensemble.test)
+  
+  save(ensemble.test, file="modFit.lda.test.RData")
+} 
+```
+
