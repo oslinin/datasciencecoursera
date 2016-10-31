@@ -11,17 +11,24 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-The following is an application of machine learning to predict the validity of exercise performance based on sensor data.  We use in sample accuracy to evaluate models.
+The following is an application of machine learning to evaluate the execution of exercise performance based on sensor data.  
 
+## Approach
 
-### Format
-#### R Code
+We use in sample accuracy to evaluate machine learning models for this task.
+
 We save the variables in each chunk of R code to binary files and use those files if possible, in order to avoid rerunning code unnecessarily.
-#### Figures
+
 There are four figures in the data exploration section.  In the rest of the document, accuracy and coefficients are shown for different models as output from the chunks of R code.
 
 
-## Read data
+## Data 
+The Weight Lifting Exercise (WLE) dataset used is from:
+
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+The data is available at http://groupware.les.inf.puc-rio.br/
+
 ```{r , echo=F}
 source("G:/knitr.R")
 setwd("//msad/root/NA/NY/USERS/slinino/My Documents/R/datasciencecoursera-gh-pages/Practical Machine Learning/project")
@@ -53,12 +60,11 @@ There are 3 time stamp columns: raw_timestamp_part_1, raw_timestamp_part_2, and 
 
 ```{r , echo=T}
 suppressPackageStartupMessages(library(ggplot2))
-suppressPackageStartupMessages(library(Hmisc))
-suppressPackageStartupMessages(library(gridExtra))
 
 qplot(raw_timestamp_part_1, raw_timestamp_part_2, data=traind, 
       color=user_name, main = "Figure 1: Timestamp Columns")
 ```
+
 To see the result more clearly, we look at one user_name.
 ```{r , echo=T}
 qplot(raw_timestamp_part_1, raw_timestamp_part_2, color=user_name, 
@@ -66,18 +72,21 @@ qplot(raw_timestamp_part_1, raw_timestamp_part_2, color=user_name,
 ```
 
 The field cvtd_timestamp seems to be a less granular version of raw_timestamp_part_1.
+
 ```{r , echo=T}
 qplot(raw_timestamp_part_1, cvtd_timestamp, data=traind, color=user_name, 
       main = "Figure 3: cvtd_timestamp")
 ```
+
 To see the result more clearly, we look at one user_name.
+
 ```{r , echo=T}
 qplot(raw_timestamp_part_1, cvtd_timestamp, color=user_name, 
       data=traind[traind$user_name=="charles",], main = "Figure 4: cvtd_timestamp: one user")
 
 ```
 
-cvtd_timestamp seems to be an indicator of the exercise performed, so we will not remove it.
+cvtd_timestamp seems to be an indicator of the exercise performed, so we will not remove it. Even though it is correlated with raw_timestamp_part_1, it seems to have additional information.
 
 ## Data cleaning
 
@@ -106,11 +115,13 @@ if (!exists("preObj")){
 
 ## Model fitting 
 
-### Trees
+## Trees
 We will try to fit a tree model using the rpart package.  Trees are generally useful for splitting variables into multiple groups, which is the task here.
 
 
 ```{r , echo=T}
+suppressPackageStartupMessages(library(rpart))
+
 if (!exists("modFit.rpart")) if (file.exists("modFit.rpart.RData")) load("modFit.rpart.RData")
 if (!exists("modFit.rpart")){
   modFit.rpart <- train(classe~ .,data=trainp,method="rpart") 
@@ -123,11 +134,13 @@ print(confusionMatrix(trainp$classe, predict(modFit.rpart,trainp))$overall['Accu
 
 Accuracy is low, and the tree traversal model does not seem to be the best way to model these largely numerical covariates.  
 
-### Linear Discriminant Analysis
+## Linear Discriminant Analysis
 
 We will now fit a linear discriminant analysis (LDA) model using the MASS package through the caret package.  LDA is well suited for the problem, because the variables are largely numerical, and assuming that they are drawn from some parametric distribution should not be reasonable.  
 
 ```{r , echo=T}
+suppressPackageStartupMessages(library(MASS))
+
 if (!exists("modFit.lda")) if (file.exists("modFit.lda.RData"))  load("modFit.lda.RData")
 if (!exists("modFit.lda")){
   modFit.lda <- train(classe~ .,data=trainp,method="lda") 
@@ -139,7 +152,7 @@ print(confusionMatrix(trainp$classe, predict(modFit.lda,trainp))$overall['Accura
 
 The accuracy is fairly high.  The model has also created indicated variables for the user_name, and cvtd_timestamp, which is necessary for variable data, since the numerical value of the variable is meaningless. 
 
-### Cross-Validation
+## Cross-Validation
 We will use cross validation to attempt to improve out of sample performance, becuase the accuracy measure of the model above will be too optimistic for out of sample data.
 
 ```{r , echo=T}
@@ -156,7 +169,7 @@ print(confusionMatrix(trainp$classe, predict(modFit.lda.cv,trainp))$overall['Acc
 
 ```
 
-### Dimension reduction 
+## Dimension reduction 
 There still 123 variables, and we will try to use PCA to reduce this number.  This preprocessing procedure will calculate a linear transformation of the variables to capture 90% of the variation in the variables, other than user_name.  We first calculate the number of principal components necessary, and then use this to fit the LDA model.  We also normalize the data in the preprocessing step by centering and scaling, in order to help the model calibrate.
 
 
@@ -189,7 +202,7 @@ print(confusionMatrix(trainp$classe, predict(modFit.lda.pca,train.pca))$overall[
 
 The PCA model is less accurate, but faster, since it uses fewer variables.
 
-### Ensemble model
+## Ensemble model
 We can try to combine predictors to see if in-sample performance improves.  We use random forests to combine predictors of our previous models.
 
 
@@ -220,8 +233,10 @@ We do not provide results for boosting or regularization feature selection becau
 We will now apply the LDA model to the test data.
 
 ```{r , echo=T}
-if (!exists("ensemble.test")) if (file.exists("modFit.lda.test.RData"))  load("modFit.lda.test.RData")
-if (!exists("ensemble.test")){
+suppressWarnings(suppressPackageStartupMessages(library(randomForest)))
+
+if (!exists("combinedTestData")) if (file.exists("modFit.lda.test.RData"))  load("modFit.lda.test.RData")
+if (!exists("combinedTestData")){
   # apply the transformation in preObj to test data: knnImpute, center, scale; subset to keep.cols
   keep.cols1 = keep.cols %except% "classe"
   testp <- predict(preObj, testd[,keep.cols1]) 
@@ -229,13 +244,16 @@ if (!exists("ensemble.test")){
   
   #run the model on test data.
   combinedTestData <- data.frame(
-    lda=      predict(modFit.lda    ,testp), 
+    lda=      predict(modFit.lda.cv ,testp), 
     lda.pca = predict(modFit.lda.pca,test.pca), 
     rpart =   predict(modFit.rpart  ,testp)
   )  
   ensemble.test <- predict(comb.fit, combinedTestData)
-  save(ensemble.test, file="modFit.lda.test.RData")
+  combinedTestData$ensemble = ensemble.test
+  save(combinedTestData, ensemble.test, file="modFit.lda.test.RData")
 } 
-print(ensemble.test)
+print(combinedTestData)
 ```
 
+
+The ensemble model always agrees with the LDA model.
