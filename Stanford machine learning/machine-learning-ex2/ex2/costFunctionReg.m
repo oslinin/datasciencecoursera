@@ -20,7 +20,7 @@ r1=sigmoid(X*theta);
 theta1 = theta';
 theta1(1) = 0;
 J=sum(-y .* log(r1) - (1-y) .* log(1-r1)) / m + lambda/(2*m) * sum(theta1 .^2);
-grad  =  ( (r1 - y)' * X) / m + lambda / m * theta;
+grad  =  ( (r1 - y)' * X) / m + lambda / m * theta1;
 
 
 
