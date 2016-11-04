@@ -67,27 +67,27 @@ J2 = sum(J1)/m;  % sum rows and divide by m
 %               over the training examples if you are implementing it for the 
 %               first time.
 
-A2 = sigmoid([ones(m, 1) X  ] * Theta1');
-A3 = sigmoid([ones(m, 1) A2 ] * Theta2');
-delta3 = A3 - Y1;
-A2 = sigmoid([ones(m, 1) X  ] * Theta1');
-A3 = sigmoid([ones(m, 1) A2 ] * Theta2');
-
-delta3 = A3 - Y1;
+i=1;
 for i = 1:m
   X1 =  X(i, :)';  
-  X1 = [1; X1];
-  Z2 = Theta1 * X1;
-  A2 = sigmoid(Z2);
-  Z3 = Theta2 * [ 1; A2 ];
+  A1 = [1 ; X1];
+  Z2 = Theta1 * A1;
+  A2 = [1 ; sigmoid(Z2)];
+  Z3 = Theta2 * A2;
   A3 = sigmoid(Z3);
-  d3 = A3' - Y1(i, :)';
+
+  d3 = A3 - Y1(i, :)';  %length 10
+  x = d3 * A2'; % A2 is length 26, so 10x26
+  Theta2_grad = Theta2_grad + x;
   
-  d2a = Theta2' * d3;
-  d2b = sigmoidGradient(Z2');
-  d2 = d2a(2:end) .* d2b;
-  d2 = d3 * A2'
+  d2 = (Theta2' * d3) .*  sigmoidGradient([1; Z2]); %length 26
+  x = d2(2:end) * A1' ; % a1 is length 401 so 25x401
+  Theta1_grad = Theta1_grad + x;
 end
+Theta2_grad=Theta2_grad/m;
+Theta1_grad=Theta1_grad/m;
+
+
 % Part 3: Implement regularization with the cost function and gradients.
 %
 %         Hint: You can implement this around the code for
@@ -99,14 +99,12 @@ Theta1a = Theta1; Theta1a(:, 1) = 0;
 Theta2a = Theta2; Theta2a(:, 1) = 0;
 J3 = J2 + (sum(sum(Theta1a.^2, 1)) + sum(sum(Theta2a.^2, 1)) )* lambda / 2 / m;
 
-
-
-
+Theta2_grad = Theta2_grad + lambda / m * Theta2a; 
+Theta1_grad = Theta1_grad + lambda / m * Theta1a; 
 
 % -------------------------------------------------------------
-J=J3;
 % =========================================================================
-
+J=J3;
 % Unroll gradients
 grad = [Theta1_grad(:) ; Theta2_grad(:)];
 
