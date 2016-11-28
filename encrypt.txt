@@ -1,0 +1,24 @@
+xor
+1 1 -> 1
+0 1 -> 0
+1 0 -> 0
+0 0 -> 1
+
+Stream cipher (e.g. one time pad OTP) has perfect secrecy if it reveals nothing about the message.
+
+PRG is secure 
+	iff 
+unpredictable 
+	iff 
+no statistical test has advantage(can distinguish from true randomness) e.g. if you can LIKELY guess LSB, you know LIKELY it's not random.
+
+stream cipher, e.g. OTP, is one time semantically secure
+	iff
+can withstand attach (attacker sends m1, m2, gets c(m1 or m2) and knows which one it was)  e.g. if you can LIKELY guess LSB, you know which msg it LIKELY was
+	iff
+E(k, m1) ~p E(k, m2)
+
+
+
+WEP keeps repeating key, so two time pad and RC4 is not secure when key is redundant.
+CSS has 2 LFSRs (key split between them) that can be attached by knowing that mpeg starts with the same 20bit msg, brute forcing the 1st one and knowing if the second one came from lfsr. That gets you the key.
