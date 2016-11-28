@@ -14,7 +14,7 @@ no statistical test has advantage(can distinguish from true randomness) e.g. if 
 
 stream cipher, e.g. OTP, is one time semantically secure
 	iff
-can withstand attach (attacker sends m1, m2, gets c(m1 or m2) and knows which one it was)  e.g. if you can LIKELY guess LSB, you know which msg it LIKELY was
+can withstand attach (attacker sends m1, m2, gets c(m1 or m2) and knows which one it was)  e.g. if you can LIKELY guess LSB, you know which msg it LIKELY was; or if you know G'(k1, k2) = G(k1) AND G(K2), then LSB(G') is likely to be .5*.5 = .25, but .5 in a random string, so a statistical test with advantage |.25-.5| can be devised.
 	iff
 E(k, m1) ~p E(k, m2)
 
