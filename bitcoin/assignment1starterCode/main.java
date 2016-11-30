@@ -11,6 +11,13 @@ import java.security.Signature;
 public class main {
 
 	public static void main(String[] args) {
+		public PRGen prGen;
+		byte[] key = new byte[32];
+	    for (int i = 0; i < 32; i++) key[i] = (byte) 1;
+	    prGen = new PRGen(key);
+	       
+
+	}
 		/*System.out.println("hello world");
 		Transaction tr = new Transaction();
 		System.out.println(tr.numInputs());
@@ -24,12 +31,12 @@ public class main {
 	//	Transaction.Output o2 = new Transaction.Output(20.0,(PublicKey)sig2);
         //Transaction x = new Transaction();
         //x.addInput(, outputIndex);
-         * 	*/
+         * 
 		try {
 			PublicKey sig = (PublicKey)Signature.getInstance("SHA256withRSA");
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
-	}
+	}	*/
 }

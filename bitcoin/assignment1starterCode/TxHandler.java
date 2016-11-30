@@ -22,7 +22,7 @@ public class TxHandler {
     public boolean isValidTx(Transaction tx) {
 
         boolean ok1 = true;
-        ArrayList<UTXO> r = new ArrayList<UTXO>();
+        ArrayList<UTXO> inputslist = new ArrayList<UTXO>();
         double intot=0;
     	for (int i = 0 ; i < tx.numInputs() ; i++) { //iterate inputs
     		byte[] rawdata = tx.getRawDataToSign(i);
@@ -34,12 +34,12 @@ public class TxHandler {
     				// (2) the signatures on each input of {@code tx} are valid,		
     				Crypto.verifySignature(utxoPoolL.getTxOutput(txo).address, rawdata , ti.signature);    		
     		intot += utxoPoolL.getTxOutput(txo).value;
-    		r.add(txo);
+    		inputslist.add(txo);
      	}
     	
-    	Collections.sort(r);
-    	for (int i = 2; i < r.size(); i++) // (3) no UTXO is claimed multiple times by {@code tx},
-    		if (r.get(i).equals(r.get(i-1))) ok1=false;
+    	Collections.sort(inputslist);
+    	for (int i = 2; i < inputslist.size(); i++) // (3) no UTXO is claimed multiple times by {@code tx},
+    		if (inputslist.get(i).equals(inputslist.get(i-1))) ok1=false;
     	
     	double outtot=0;
        	for (int i = 0 ; i < tx.numOutputs() ; i++) { //iterate outputs
@@ -58,18 +58,27 @@ public class TxHandler {
      */
     public Transaction[] handleTxs(Transaction[] possibleTxs) {
     	ArrayList<Transaction> trs = new ArrayList<Transaction>(Arrays.asList(possibleTxs));
-    	// remove invalid transactions.
-    	//trs.forEach((trx) -> {if (!isValidTx(trx)) trs.remove(trx);});
-    	for (Transaction trx : trs) {
-    		if (!isValidTx(trx)) {
-    			trs.remove(trx);
-    		} else {
-    			
-    		}   		
-    	}
     	
-        
-        return  possibleTxs;
+    	//trs.forEach((trx) -> {if (!isValidTx(trx)) trs.remove(trx);});
+    	//for (Transaction tx1 : trs) if (!isValidTx(tx1)) trs.remove(tx1);
+    	Transaction txr2 = new Transaction();
+    	for (Transaction tx1 : trs){ 
+    		if (isValidTx(tx1)) { // remove invalid transactions.
+    			
+    			//try adding tx1 to txr2; call it txr
+    			Transaction txr = new Transaction(txr2);
+    			for (Transaction.Input  ti : tx1.getInputs())  txr.addInput( ti.prevTxHash, ti.outputIndex);
+    			for (Transaction.Output ti : tx1.getOutputs()) txr.addOutput(ti.value, ti.address);
+    			txr.finalize();
+    			
+    			if (isValidTx(txr)) {
+    				txr2=txr;
+    				break;
+    			} 
+    		} // end if (isValidTx(tx1)) {
+    		trs.remove(tx1); // remove invalid transactions and those that mess up txr2 running transaction array.
+    	}
+        return  (Transaction[])trs.toArray();
     }
     UTXOPool utxoPoolL;
 }
