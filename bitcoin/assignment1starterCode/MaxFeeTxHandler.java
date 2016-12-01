@@ -3,21 +3,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-
-public class TxHandler {
-    /**Creates a public ledger whose current UTXOPool (collection of unspent transaction outputs) is
-     * {@code utxoPool}. This should make a copy of utxoPool by using the UTXOPool(UTXOPool uPool)
-     * constructor.     */
-    public TxHandler(UTXOPool utxoPool) {
+public class MaxFeeTxHandler {
+    public MaxFeeTxHandler(UTXOPool utxoPool) {
     	utxoPoolL = new UTXOPool(utxoPool);
     }
 
     /**@return true if:
-     * (1) all outputs claimed by {@code tx} are in the current UTXO pool, 
-     * (2) the signatures on each input of {@code tx} are valid, 
-     * (3) no UTXO is claimed multiple times by {@code tx},
-     * (4) all of {@code tx}s output values are non-negative, and
-     * (5) the sum of {@code tx}s input values is greater than or equal to the sum of its output
+     * (1) all outputs claimed by code tx are in the current UTXO pool, 
+     * (2) the signatures on each input of code tx are valid, 
+     * (3) no UTXO is claimed multiple times by code tx,
+     * (4) all of code txs output values are non-negative, and
+     * (5) the sum of code txs input values is greater than or equal to the sum of its output
      *     values; and false otherwise.     */
     public boolean isValidTx(Transaction tx) {
 
@@ -29,24 +25,24 @@ public class TxHandler {
     		Transaction.Input ti = tx.getInput(i);
     		UTXO txo = new UTXO(ti.prevTxHash, ti.outputIndex);
     		ok1 = ok1 & 
-    		        // (1) all outputs claimed by {@code tx} are in the current UTXO pool,
+    		        // (1) all outputs claimed by code tx are in the current UTXO pool,
     				utxoPoolL.contains(txo) &
-    				// (2) the signatures on each input of {@code tx} are valid,		
+    				// (2) the signatures on each input of code tx are valid,		
     				Crypto.verifySignature(utxoPoolL.getTxOutput(txo).address, rawdata , ti.signature);    		
     		intot += utxoPoolL.getTxOutput(txo).value;
     		inputslist.add(txo);
      	}
     	
     	Collections.sort(inputslist);
-    	for (int i = 2; i < inputslist.size(); i++) // (3) no UTXO is claimed multiple times by {@code tx},
+    	for (int i = 2; i < inputslist.size(); i++) // (3) no UTXO is claimed multiple times by code tx,
     		if (inputslist.get(i).equals(inputslist.get(i-1))) ok1=false;
     	
     	double outtot=0;
        	for (int i = 0 ; i < tx.numOutputs() ; i++) { //iterate outputs
-       		if (tx.getOutput(i).value<0) ok1=false; // (4)  all of {@code tx}s output values are non-negative
+       		if (tx.getOutput(i).value<0) ok1=false; // (4)  all of code txs output values are non-negative
        		outtot += tx.getOutput(i).value;
        	}
-       	if (outtot>intot) ok1=false; //(5) the sum of {@code tx}s input values is greater than or equal to the sum of its output values; and false otherwise.
+       	if (outtot>intot) ok1=false; //(5) the sum of code txs input values is greater than or equal to the sum of its output values; and false otherwise.
        	
     	return ok1;
     }
@@ -70,7 +66,7 @@ public class TxHandler {
     	int[][] K = new int[trs.size()][tot];   	
     	Transaction2[][] T = new Transaction2[trs.size()][tot];
     	//Knapsack where weight = value.
-    	int a,b,v,i,j;
+    	int a=0,b=0,v=0,i=0,j=0;
     	v = (int)totalValue(trs.get(0));
     	for (j = 0; j<= tot;  j++) if (j>=v) {K[0][j]=v; T[0][j]=new Transaction2(trs.get(0), 0);}
     	
@@ -94,7 +90,14 @@ public class TxHandler {
     			}
     		}
     	}
-    	Transaction[] res=new Transaction[T[i][j].i.size()];
+	int best=0;
+	for (i=0; i<trs.size(); i++)
+		for (j=0; j<tot; j++)
+			if(K[i][j]>best) {
+				best=K[i][j];a=i; b=j;
+			}
+        
+    	Transaction[] res=new Transaction[T[a][b].i.size()];
     	for( int k = 0 ; k < res.length; k++) res[k]=trs.get(k);
     	return res;
     }
