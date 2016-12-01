@@ -1,42 +1,63 @@
-//package bchw1;
+// Also Here https://gist.github.com/KKostya/922b944ff1ae337ebf68b92bb4a96ab8
+import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+//import java.security.MessageDigest;
 import java.security.Signature;
+import java.security.SignatureException;
 
 public class main {
+	public static void main(String[] args) 
+			throws NoSuchAlgorithmException, InvalidKeyException, SignatureException 
+	{		
+		// This generates keypairs
+		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+		// This hashes stuff
+	//	MessageDigest md = MessageDigest.getInstance("SHA-512");
+		// This creates signatures
+		Signature sig = Signature.getInstance("SHA256withRSA");
+		
+		// Scroodge generates a key pair
+		keyGen.initialize(512); 
+		KeyPair scroodge  = keyGen.generateKeyPair();
+		
+		// Creates genesis transaction
+		Transaction genesis = new Transaction();
+		genesis.addOutput(100, scroodge.getPublic());
+		
+		//Hashes it
+		//genesis.setHash(md.digest(genesis.getRawTx()));
+		genesis.finalize();
+		
+		// Adds it to the pool
+		UTXOPool pool = new UTXOPool();
+		UTXO utxo = new UTXO(genesis.getHash(), 0);
+		pool.addUTXO(utxo, genesis.getOutput(0));
 
-	public static void main(String[] args) {
-		public PRGen prGen;
-		byte[] key = new byte[32];
-	    for (int i = 0; i < 32; i++) key[i] = (byte) 1;
-	    prGen = new PRGen(key);
-	       
-
-	}
-		/*System.out.println("hello world");
-		Transaction tr = new Transaction();
-		System.out.println(tr.numInputs());
-		UTXOPool utxop = new UTXOPool();
-		System.out.println(utxop.toString());
-	
-        
-        Signature sig2 = Signature.getInstance("SHA256withRSA");
-        PublicKey.
-///		Transaction.Output o1 = new Transaction.Output(10.0,(PublicKey)sig);
-	//	Transaction.Output o2 = new Transaction.Output(20.0,(PublicKey)sig2);
-        //Transaction x = new Transaction();
-        //x.addInput(, outputIndex);
-         * 
-		try {
-			PublicKey sig = (PublicKey)Signature.getInstance("SHA256withRSA");
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
-	}	*/
+		// Goofy creates his pair
+		keyGen.initialize(512);
+		KeyPair goofy    = keyGen.generateKeyPair();
+		
+		//Scroodge makes a transaction to Goofy
+		Transaction send = new Transaction();
+		send.addInput(genesis.getHash(), 0);
+		send.addOutput(50, goofy.getPublic());
+		send.addOutput(40, scroodge.getPublic());
+		
+		// Signs the input with his private key
+		sig.initSign(scroodge.getPrivate());
+		sig.update(send.getRawDataToSign(0));
+		send.addSignature(sig.sign(), 0);
+		
+		// Hashes 
+		// send.setHash(md.digest(send.getRawTx()));
+		send.finalize();
+		
+		TxHandler handler = new TxHandler(pool);
+		//MaxFeeTxHandler handler2 = new MaxFeeTxHandler(pool);
+	//	handler.isValidTx(send);
+		System.out.println(handler.isValidTx(send));
+		//		System.out.println(handler2.isValidTx(send));
+    }
 }
