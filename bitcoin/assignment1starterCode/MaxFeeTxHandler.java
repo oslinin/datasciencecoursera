@@ -46,8 +46,56 @@ public class MaxFeeTxHandler {
        	
     	return ok1;
     }
-
-    /**
+    public boolean isValidTx2(Transaction tx) {
+    	//boolean ok1 = true;
+        ArrayList<UTXO> inputslist = new ArrayList<UTXO>();
+        double intot=0;
+    	for (int i = 0 ; i < tx.numInputs() ; i++) { //iterate inputs
+    		byte[] rawdata = tx.getRawDataToSign(i);
+    		Transaction.Input ti = tx.getInput(i);
+    		UTXO txo = new UTXO(ti.prevTxHash, ti.outputIndex);
+    		inputslist.add(txo);
+    		//ok1 = ok1 & 
+    		        // (1) all outputs claimed by code tx are in the current UTXO pool,
+    		if (!utxoPoolL.contains(txo)) return false; 
+    				// (2) the signatures on each input of code tx are valid,
+    		
+    			//ok1=ok1&	Crypto.verifySignature(utxoPoolL.getTxOutput(txo).address, rawdata , ti.signature);
+    		try{
+    			Transaction.Output o = utxoPoolL.getTxOutput(txo);     	
+    			RSAKey k = o.address;
+    			byte[] sig = tx.getInput(i).signature;
+    			boolean p = k.verifySignature(tx.getRawDataToSign(i) , sig); 
+    		//	if (!p) return false;
+    		} catch (Exception e) {
+    			return false;
+    		}
+    		
+    		
+                try {
+                	Transaction.Output x = utxoPoolL.getTxOutput(txo);
+                    intot += x.value;
+                } catch(NullPointerException e)    {    
+                    return false;
+                } catch(Exception e2){
+                	return false;
+                }
+    		
+     	}
+    	
+    	Collections.sort(inputslist);
+    	for (int i = 1; i < inputslist.size(); i++) // (3) no UTXO is claimed multiple times by code tx,
+    		if (inputslist.get(i).equals(inputslist.get(i-1))) return false;
+    	
+    	double outtot=0;
+       	for (int i = 0 ; i < tx.numOutputs() ; i++) { //iterate outputs
+       		if (tx.getOutput(i).value<0) return false; // (4)  all of code txs output values are non-negative
+       		outtot += tx.getOutput(i).value;
+       	}
+       	if (outtot>intot) return false; //(5) the sum of code txs input values is greater than or equal to the sum of its output values; and false otherwise.
+       	
+    	return true;    }
+     /**
      * Handles each epoch by receiving an unordered array of proposed transactions, checking each
      * transaction for correctness, returning a mutually valid array of accepted transactions, and
      * updating the current UTXO pool as appropriate.
@@ -81,7 +129,7 @@ public class MaxFeeTxHandler {
     			} else {
         			Transaction2 n =T[i-1][j-v];
         			n.bindTx2(trs.get(i),i);    			
-        			if (!isValidTx(n.t)) b=0; else b=totalValue(n.t);
+        			if (!isValidTx2(n.t)) b=0; else b=totalValue(n.t);
         			if (b>a){ 
         				K[i][j]=b; T[i][j]=n;
         			} else {
