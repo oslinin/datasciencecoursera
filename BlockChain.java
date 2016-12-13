@@ -11,7 +11,7 @@ public class BlockChain {
     public ArrayList<BlockNode> heads;
     public int height;
     public TransactionPool txPool;
-    UTXOPool uPool = new UTXOPool();
+    public UTXOPool uPool = new UTXOPool();
     private HashMap<ByteArrayWrapper, BlockNode> H;
 
     
@@ -55,13 +55,11 @@ public class BlockChain {
          heads = new ArrayList<BlockNode>();
          heads.add(genesis);
          H = new HashMap<ByteArrayWrapper, BlockNode>();
+         
          H.put(new ByteArrayWrapper(genesisBlock.getHash()), genesis);
          height = 1;
          maxHeightBlock = genesis;
          txPool = new TransactionPool();
-
-         
-    	
     }
 
     /** Get the maximum height block */
@@ -139,6 +137,7 @@ public class BlockChain {
         updateTransactionPool(block); //update the transaction pool, removing transactions used by block 
         
         BlockNode current = new BlockNode(block, parent, uPool);
+        
         H.put(new ByteArrayWrapper(block.getHash()), current);
 
         if (current.height > height) {
