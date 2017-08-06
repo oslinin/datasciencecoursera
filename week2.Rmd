@@ -1,0 +1,80 @@
+---
+title: "Data Science Capstone Week 2"
+author: "Oleg Slinin"
+date: "Aug 1, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+We explore the data.  Initially we use the wc utility, which is faster than R.  We then read the data into R and look at sentence and word length.
+
+## Approach
+
+1) Look at wc of the English language datasets.
+2) Import some of the data into R and examine it more closely.
+
+
+```{r , echo=F}
+setwd("/home/oleg/Downloads/final/en_US")
+```
+
+```{r , "wc"}
+setwd("en_US")
+fls <- dir(pattern=".txt")
+print("English files:")
+print(fls)
+lapply(fls, function(x){
+	    capture.output({
+	        cmd1=paste("wc --lines --max-line-length ",x,sep="")
+		print(system(cmd1, intern=T))
+		})
+})
+```
+  
+Blogs has the least rows but most characters per row.
+The Twitter data as the most rows but least characters per row.b
+
+Now read the data.
+```{r , "first look"}
+
+print(getwd())
+fls <- dir(pattern=".txt")
+dat <- lapply(fls, readLines, 10000); names(dat) <- fls
+lapply(dat, head, 3)
+```
+
+```{r , "clean data"}
+print("Data has special characters that need to be removed")
+spec.char <- c("\342", "\200", "\234", "\235", "\302","\224", "\231", "\223")
+for (i in spec.char) {
+    for (j in fls){
+        dat[[j]] <- gsub(i, "", dat[[j]])
+    }
+}
+lapply(dat, head, 10)
+```
+
+Try to summarize the data.  We first look at average number of words in a line.
+```{r , "summary functions: word count"}
+      ## Count words, by counting spaces, and adding 1.  E.g. "hello"->1, "hi foe"->2
+count.spaces <- function(x ) nchar(x)-nchar(gsub(" ", "", x))+1
+num.spaces <- lapply(dat, count.spaces); names(num.spaces) <- names(dat)
+do.call(rbind, lapply(num.spaces, summary))
+names(num.spaces) <- names(dat)
+for (i in names(num.spaces)) hist(num.spaces[[i]], main=paste0("Frequencies of ",i), xlab="Word Count")
+```
+
+Next we look at the average word length.  This is measured as number of characters divided by number of words in a line.
+
+```{r , "summary functions: word length"}
+average.word.length <- function(x ) nchar(x)/count.spaces(x)
+awl <- lapply(dat, average.word.length); names(num.spaces) <- names(dat)
+do.call(rbind, lapply(awl, summary))
+names(awl) <- names(dat)
+for (i in names(awl)) hist(awl[[i]], main=paste0("Frequencies of ",i), xlab="Word Length")
+```
